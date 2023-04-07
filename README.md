@@ -6,9 +6,7 @@
 
 另外还有其他功能在逐步添加中。
 
-github：https://github.com/YXPHOPE/mdECharts
-
-gitee：https://gitee.com/yxphope/mdECharts
+gitee：https://gitee.com/yxphope/Tipora
 
 <font color="blue">在Typora中实现输入代码通过ECharts解析成图表的功能</font>
 
@@ -89,7 +87,7 @@ h1:before, h2:before, h3:before{
 
 效果如下
 
- ![image-20230408010108009](./mdECharts.assets/image-20230408010108009.png)
+ ![image-20230408010108009](./README.assets/image-20230408010108009.png)
 
 同时，通过在设置开启typora的调试模式，右键检查元素，即可像浏览器一样审查元素，并按需要添加任何样式。
 
