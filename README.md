@@ -1,4 +1,4 @@
-# mdECharts
+# Tipora
 
 在Typora中实现输入代码通过ECharts解析成图表的功能。
 
