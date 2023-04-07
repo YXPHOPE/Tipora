@@ -14,6 +14,10 @@ pre.md-meta-block.md-end-block.md-focus,pre.md-fences.md-end-block.ty-contain-cm
   margin-bottom: 10px;
   opacity: 1;
 }
+#write img+p {
+	margin: 0;
+  text-align: center;
+}
 `;
 // 思来想去，与其自己做解析，还不如首行写上类型，然后提供一个按钮共用户选择是否粘贴该类型的模板
 const Template = {
@@ -55,6 +59,8 @@ if (!window.MDexport) {
 }
 
 var write = document.querySelector("div#write");
+var styleCustom = nE("style", "custom", 0);
+document.head.appendChild(styleCustom);
 
 function nE(e, id = undefined, cla = undefined, html = "") {
   var ele = document.createElement(e);
@@ -193,6 +199,29 @@ function addStyle(css) {
   c.innerHTML = css;
   document.head.append(c);
 }
+function imgProcess(v){
+  let n = v.nextElementSibling;
+  if(n && n.tagName==='P'){
+    if(n.alt !== v.alt){n.alt=v.alt;}
+  }
+  else if(v.alt){
+    v.outerHTML += `<p alt="${v.alt}"></p>`;
+  }
+}
+function myTools(){
+  // 额外的功能：对```style自主添加样式的支持, 在切换文件时生效
+  let sty = write.querySelector(".md-fences.md-end-block[lang=style] .CodeMirror-code");
+  if (sty && styleCustom.innerHTML !== sty.textContent) {
+    styleCustom.innerHTML = sty.textContent;
+    if(MDexport){write.querySelector(".md-fences.md-end-block[lang=style]").outerHTML="";}
+  } else if(!sty) {
+    styleCustom.innerHTML = "";
+  }
+  if(MDexport){write.querySelectorAll('p>img:only-child').forEach(imgProcess);}
+  else{write.querySelectorAll('p .md-image.md-img-loaded:only-child img').forEach(imgProcess);}
+  let b = write.lastElementChild;
+  if(write.firstElementChild.tagName!=='BUTTON' && b.tagName==='BUTTON'){b.remove();}
+}
 
 var initMD = function () {
   addStyle(cssStyle);
@@ -217,13 +246,11 @@ var initMD = function () {
       }
     }
   });
-  var styleCustom = nE("style", "custom", 0);
-  document.head.appendChild(styleCustom);
   // 暂未找到更好的方法确定打开另一个文件
   var FileTitle = "。";
   var tmp = document.querySelector("#top-titlebar .title-text");
   var intervalFileChange = setInterval(() => {
-    if (tmp.textContent !== FileTitle) {
+    if (tmp && tmp.textContent !== FileTitle) {
       FileTitle = tmp.textContent;
       console.log("File changed to:", FileTitle);
       if (write.textContent === "") {
@@ -251,28 +278,17 @@ keywords: [Typora, Note, Latex, Diagram]
         };
         write.appendChild(button);
       }
+      myTools();
       var chartCode = write.querySelectorAll(".md-fences.md-end-block[lang=echarts]");
       chartCode.forEach((v) => {
         console.log("Render charts: ", v);
         parseCode(v, (nofocus = true));
       });
     }
-    // 额外的功能：对```style自主添加样式的支持, 在切换文件时生效
-    let sty = write.querySelector(".md-fences.md-end-block[lang=style] .CodeMirror-code");
-    if (sty) {
-      styleCustom.innerHTML = sty.textContent;
-    } else {
-      styleCustom.innerHTML = "";
-    }
   }, 1000);
+  setInterval(myTools,5000);
   if (MDexport) {
-    let sty = write.querySelector(".md-fences.md-end-block[lang=style]");
-    if (sty) {
-      styleCustom.innerHTML = sty.querySelector(".CodeMirror-code").textContent;
-      sty.style.display = "none";
-    } else {
-      styleCustom.innerHTML = "";
-    }
+    myTools();
     var chartCode = document.querySelectorAll(".md-fences.md-end-block[lang=echarts]");
     chartCode.forEach((v) => {
       console.log("Render charts: ", v);
