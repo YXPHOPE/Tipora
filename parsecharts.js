@@ -1,6 +1,6 @@
 var debugMd = true;
 var cssStyle = `
-pre.md-meta-block.md-end-block,pre.md-fences.md-end-block.ty-contain-cm.modeLoaded[lang=style] {
+pre.md-meta-block.md-end-block,pre.md-fences.md-end-block.ty-contain-cm.modeLoaded[lang=style],pre.md-fences.md-end-block[lang=script] {
   padding: 5px;
   height: 30px;
   margin-bottom: 4px;
@@ -8,18 +8,53 @@ pre.md-meta-block.md-end-block,pre.md-fences.md-end-block.ty-contain-cm.modeLoad
   overflow: hidden;
   transition: opacity 0.4s;
 }
-pre.md-meta-block.md-end-block.md-focus,pre.md-fences.md-end-block.ty-contain-cm.modeLoaded.md-focus[lang=style] {
+pre.md-meta-block.md-end-block.md-focus,pre.md-fences.md-end-block.ty-contain-cm.modeLoaded.md-focus[lang=style],pre.md-fences.md-end-block.md-focus[lang=script] {
   padding: 16px;
   height: 100%;
   margin-bottom: 10px;
   opacity: 1;
 }
-#write img+p {
+#write img+p, #write svg+p {
 	margin: 0;
   text-align: center;
 }
+#write .img-center{
+  display: block;
+  margin: auto;
+}
+/* Integrated Window's header background color */
+div.info-panel-tab{margin-top:0;}
+div.sidebar-content{top:40px;}
+header {background-color: aliceblue;}
+/* scroll bar style */
+::-webkit-scrollbar {display:none;}
+content::-webkit-scrollbar {
+  display:block;
+  width:9px;
+}
+content::-webkit-scrollbar-thumb {
+  background-color: rgba(200,200,220,.4);
+  border-radius: 4px;
+}
+div.sidebar-mune#typora-sidebar {left:-1800px;}
+.export-choice {
+  position: absolute;
+  left: -1px;
+  padding: 5px;
+  top: 27px;
+  width: 43px;
+  font-size: 12px;
+  display: none;
+}
+.btn.toolbar-icon.mybtn {
+  padding: 5px 13px;
+  opacity: 0.5;
+}
+.btn.toolbar-icon.mybtn:hover {opacity: 1;}
+.btn.toolbar-icon.mybtn:hover .export-choice {display:block;}
+.export-choice:hover {background-color: aqua !important;}
 `;
-// 思来想去，与其自己做解析，还不如首行写上类型，然后提供一个按钮共用户选择是否粘贴该类型的模板
+// 思来想去，与其自己做解析，还不如首行写上类型，然后提供一个按钮供用户选择是否粘贴该类型的模板
 const Template = {
   bar: `option = {
 title:{
@@ -52,15 +87,18 @@ series: [
   bar_race: `
 `,
 };
+function $q(s){return document.querySelector(s)}
 const metaProperty = ["title", "xlabel", "ylabel", "xrange", "yrange"];
 const chartType = ["bar", "scatter", "function"];
 if (!window.MDexport) {
   var MDexport = false;
 }
 
-var write = document.querySelector("div#write");
+var write = $q("div#write");
 var styleCustom = nE("style", "custom", 0);
 document.head.appendChild(styleCustom);
+var customScript = nE("script", "customScript", 0);
+document.head.appendChild(customScript);
 
 function nE(e, id = undefined, cla = undefined, html = "") {
   var ele = document.createElement(e);
@@ -200,12 +238,22 @@ function addStyle(css) {
   document.head.append(c);
 }
 function imgProcess(v){
-  let n = v.nextElementSibling;
-  if(n && n.tagName==='P'){
-    if(n.alt !== v.alt){n.alt=v.alt;}
+  let n = v.nextElementSibling,t;
+  if(v.alt){t = v.alt;}
+  else{
+    t = v.querySelector('title');
+    if(t){t = t.textContent;};
   }
-  else if(v.alt){
-    v.outerHTML += `<p alt="${v.alt}"></p>`;
+  if(n && n.tagName==='P'){
+    if(n.alt !== t){n.alt=t;}
+  }
+  else if(t){
+    v.classList.add('img-center');
+    v.outerHTML += `<p alt="${t}"></p>`;
+  }
+  else if(v.tagName==="SVG"){
+    v.classList.add('img-center');
+    v.outerHTML += `<p alt="${t}"></p>`;
   }
 }
 function myTools(){
@@ -213,30 +261,55 @@ function myTools(){
   let sty = write.querySelector(".md-fences.md-end-block[lang=style] .CodeMirror-code");
   if (sty && styleCustom.innerHTML !== sty.textContent) {
     styleCustom.innerHTML = sty.textContent;
-    if(MDexport){write.querySelector(".md-fences.md-end-block[lang=style]").outerHTML="";}
+    if(MDexport){write.querySelector(".md-fences.md-end-block[lang=style]").style.display="none";}
   } else if(!sty) {
     styleCustom.innerHTML = "";
   }
-  if(MDexport){write.querySelectorAll('p>img:only-child').forEach(imgProcess);}
-  else{write.querySelectorAll('p .md-image.md-img-loaded:only-child img').forEach(imgProcess);}
+  if(MDexport){write.querySelectorAll('p>img:only-child, svg[alt]').forEach(imgProcess);}
+  else{write.querySelectorAll('p .md-image.md-img-loaded:only-child img, svg[alt]').forEach(imgProcess);}
   let b = write.lastElementChild;
-  if(write.firstElementChild.tagName!=='BUTTON' && b.tagName==='BUTTON'){b.remove();}
+  // 当第一行的内容超过两个字时移除复制按钮
+  if(b && write.firstElementChild.textContent.length>2 && b.tagName==='BUTTON'){b.remove();}
 }
 
+function parseHTML(pre, nofocus = false) {
+  var lines = pre.querySelector(".CodeMirror-code");
+  if (!lines) {
+    return;
+  }
+  pre.className = "md-fences md-end-block md-diagram md-fences-advanced ty-contain-cm modeLoaded" + (nofocus ? "" : " md-focus");
+  var script = lines.textContent;
+  var diag = pre.querySelector(".md-diagram-panel");
+  if (!diag) {
+    var diag = nE("div", 0, "md-diagram-panel md-fences-adv-panel", '<div class="md-diagram-panel-header"></div><div class="md-diagram-panel-preview"></div><div class="md-diagram-panel-error"></div>');
+    pre.append(diag);
+  }
+  var chart = diag.querySelector(".md-diagram-panel-preview");
+  chart.innerHTML = script;
+  if (!nofocus) {
+    var h = 30;
+    var d = pre.querySelector(".md-diagram-panel.md-fences-adv-panel");
+    d && (h = d.clientHeight + 30);
+    pre.style.marginBottom = h + "px";
+  }
+}
 var initMD = function () {
   addStyle(cssStyle);
   write.addEventListener("input", (e) => {
     var pre = e.path[3] || {};
     if (pre && pre.lang === "echarts") {
       parseCode(pre);
+    }else if(pre && pre.lang === "purehtml"){
+      parseHTML(pre);
     }
   });
   // click事件被Typora给阻止冒泡了
   write.addEventListener("mousedown", (e) => {
     var pre;
+    if(!e.path){return;}
     for (let i = 0; i < e.path.length; i++) {
-      if (e.path[i].lang === "echarts") {
-        pre = e.path[i];
+      pre = e.path[i];
+      if (pre.lang === "echarts" || pre.lang==="purehtml") {
         // parseCode(pre);
         var h = 30;
         var d = pre.querySelector(".md-diagram-panel.md-fences-adv-panel");
@@ -248,7 +321,7 @@ var initMD = function () {
   });
   // 暂未找到更好的方法确定打开另一个文件
   var FileTitle = "。";
-  var tmp = document.querySelector("#top-titlebar .title-text");
+  var tmp = $q("#top-titlebar .title-text");
   var intervalFileChange = setInterval(() => {
     if (tmp && tmp.textContent !== FileTitle) {
       FileTitle = tmp.textContent;
@@ -279,11 +352,20 @@ keywords: [Typora, Note, Latex, Diagram]
         write.appendChild(button);
       }
       myTools();
+      let script = write.querySelector(".md-fences.md-end-block[lang=script] .CodeMirror-code");
+      if(script) {
+        document.documentElement.appendChild(nE('script',0,0,script.textContent));
+        if(MDexport){write.querySelector(".md-fences.md-end-block[lang=script]").style.display = 'none';}
+      }
       var chartCode = write.querySelectorAll(".md-fences.md-end-block[lang=echarts]");
       chartCode.forEach((v) => {
         console.log("Render charts: ", v);
         parseCode(v, (nofocus = true));
       });
+      var pureHTML = write.querySelectorAll(".md-fences.md-end-block[lang=purehtml]");
+      pureHTML.forEach((v)=>{
+        parseHTML(v,nofocus=true );
+      })
     }
   }, 1000);
   setInterval(myTools,5000);
@@ -294,6 +376,8 @@ keywords: [Typora, Note, Latex, Diagram]
       console.log("Render charts: ", v);
       parseCode(v, (nofocus = true));
     });
+    return;
+    // ！注意！在导出时，后面的代码将不再执行！
   }
 
   addStyle(`
@@ -374,6 +458,69 @@ cursor: pointer;display: none;`;
       }, 2000);
     }
   });
+  // sidebar 自动隐藏
+  var sidebar = $q("#typora-sidebar");
+  var resizer = $q("#typora-sidebar-resizer");
+  var sidebarWidth = document.documentElement.style.getPropertyValue('--sidebar-width');
+  var timeout;
+  var t;
+  function barOut(){
+    timeout = setTimeout(()=>{
+      if(!sidebar.focused && !resizer.focused){
+        t = document.documentElement.style.getPropertyValue('--sidebar-width');
+        t!='0' && (sidebarWidth=t);
+        document.documentElement.style.setProperty('--sidebar-width', '0');
+        sidebar.style.left = '-'+sidebarWidth;
+        resizer.style.width = '20px';
+      }
+    },3000)
+  }
+  barOut();
+  function barIn(){
+    this.focused = true;
+    t = document.documentElement.style.getPropertyValue('--sidebar-width');
+    t!='0' && (sidebarWidth=t);
+    document.documentElement.style.setProperty('--sidebar-width', sidebarWidth);
+    sidebar.style.left = '0';
+    resizer.style.width = '6px';
+    clearTimeout(timeout);
+  }
+  sidebar.addEventListener('mouseenter',()=>{
+    barIn.call(sidebar);
+  });
+  sidebar.addEventListener('mouseleave',()=>{
+    sidebar.focused = false;
+    if(!resizer.focused){
+      barOut()
+    }
+  });
+  resizer.addEventListener('mouseenter',()=>{
+    barIn.call(resizer);
+  });
+  resizer.addEventListener('mouseleave',()=>{
+    resizer.focused = false;
+    if(!sidebar.focused){
+      barOut();}
+  });
+  var btns = $q('#w-traffic-lights');
+  var html = $q('.do-export-button[data-key=html]');
+  var pdf = $q('.do-export-button[data-key=pdf]');
+  var pref = $q('a#m-preference');
+  var exp = nE('span',0,'btn toolbar-icon mybtn',`<svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2634" width="15" height="15"><path d="M968.772267 508.791467 757.111467 297.0624 757.111467 455.611733 680.0384 455.611733 671.061333 455.611733 368.503467 455.611733 368.503467 562.005333 671.061333 562.005333 680.0384 562.005333 757.111467 562.005333 757.111467 720.452267Z" p-id="2635"></path><path d="M578.389333 781.585067c0 13.175467-10.717867 23.927467-23.927467 23.927467L126.976 805.512533c-13.2096 0-23.927467-10.752-23.927467-23.927467L103.048533 242.414933c0-13.175467 10.717867-23.927467 23.927467-23.927467l427.485867 0c13.2096 0 23.927467 10.752 23.927467 23.927467l0 99.191467 47.8208 0L626.210133 242.414933C626.210133 202.8544 594.0224 170.666667 554.461867 170.666667L126.976 170.666667C87.415467 170.666667 55.227733 202.8544 55.227733 242.414933l0 539.170133C55.227733 821.1456 87.415467 853.333333 126.976 853.333333l427.485867 0c39.560533 0 71.748267-32.187733 71.748267-71.748267l0-99.191467-47.8208 0L578.389333 781.585067z" p-id="2636"></path></svg>`);
+  exp.style.cssText = 'position: relative;';
+  var prefbtn = nE('span',0,'btn toolbar-icon mybtn','<svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3650" width="15" height="15"><path d="M512 328c-100.8 0-184 83.2-184 184S411.2 696 512 696 696 612.8 696 512 612.8 328 512 328z m0 320c-75.2 0-136-60.8-136-136s60.8-136 136-136 136 60.8 136 136-60.8 136-136 136z" p-id="3651"></path><path d="M857.6 572.8c-20.8-12.8-33.6-35.2-33.6-60.8s12.8-46.4 33.6-60.8c14.4-9.6 20.8-27.2 16-44.8-8-27.2-19.2-52.8-32-76.8-8-14.4-25.6-24-43.2-19.2-24 4.8-48-1.6-65.6-19.2-17.6-17.6-24-41.6-19.2-65.6 3.2-16-4.8-33.6-19.2-43.2-24-14.4-51.2-24-76.8-32-16-4.8-35.2 1.6-44.8 16-12.8 20.8-35.2 33.6-60.8 33.6s-46.4-12.8-60.8-33.6c-9.6-14.4-27.2-20.8-44.8-16-27.2 8-52.8 19.2-76.8 32-14.4 8-24 25.6-19.2 43.2 4.8 24-1.6 49.6-19.2 65.6-17.6 17.6-41.6 24-65.6 19.2-16-3.2-33.6 4.8-43.2 19.2-14.4 24-24 51.2-32 76.8-4.8 16 1.6 35.2 16 44.8 20.8 12.8 33.6 35.2 33.6 60.8s-12.8 46.4-33.6 60.8c-14.4 9.6-20.8 27.2-16 44.8 8 27.2 19.2 52.8 32 76.8 8 14.4 25.6 22.4 43.2 19.2 24-4.8 49.6 1.6 65.6 19.2 17.6 17.6 24 41.6 19.2 65.6-3.2 16 4.8 33.6 19.2 43.2 24 14.4 51.2 24 76.8 32 16 4.8 35.2-1.6 44.8-16 12.8-20.8 35.2-33.6 60.8-33.6s46.4 12.8 60.8 33.6c8 11.2 20.8 17.6 33.6 17.6 3.2 0 8 0 11.2-1.6 27.2-8 52.8-19.2 76.8-32 14.4-8 24-25.6 19.2-43.2-4.8-24 1.6-49.6 19.2-65.6 17.6-17.6 41.6-24 65.6-19.2 16 3.2 33.6-4.8 43.2-19.2 14.4-24 24-51.2 32-76.8 4.8-17.6-1.6-35.2-16-44.8z m-56 92.8c-38.4-6.4-76.8 6.4-104 33.6-27.2 27.2-40 65.6-33.6 104-17.6 9.6-36.8 17.6-56 24-22.4-30.4-57.6-49.6-97.6-49.6-38.4 0-73.6 17.6-97.6 49.6-19.2-6.4-38.4-14.4-56-24 6.4-38.4-6.4-76.8-33.6-104-27.2-27.2-65.6-40-104-33.6-9.6-17.6-17.6-36.8-24-56 30.4-22.4 49.6-57.6 49.6-97.6 0-38.4-17.6-73.6-49.6-97.6 6.4-19.2 14.4-38.4 24-56 38.4 6.4 76.8-6.4 104-33.6 27.2-27.2 40-65.6 33.6-104 17.6-9.6 36.8-17.6 56-24 22.4 30.4 57.6 49.6 97.6 49.6 38.4 0 73.6-17.6 97.6-49.6 19.2 6.4 38.4 14.4 56 24-6.4 38.4 6.4 76.8 33.6 104 27.2 27.2 65.6 40 104 33.6 9.6 17.6 17.6 36.8 24 56-30.4 22.4-49.6 57.6-49.6 97.6 0 38.4 17.6 73.6 49.6 97.6-6.4 19.2-14.4 38.4-24 56z" p-id="3652"></path></svg>');
+  prefbtn.style.cssText = 'margin-right: 15px;';
+  var exhtml = nE('div',0,'export-choice','HTML');
+  exhtml.style.top = '54px';
+  var expdf = nE('div',0,'export-choice','PDF');
+  exp.appendChild(expdf);
+  exp.appendChild(exhtml);
+  btns.insertBefore(prefbtn,btns.firstChild);
+  btns.insertBefore(exp, btns.firstChild);
+  prefbtn.addEventListener('click',()=>{pref.click();});
+  expdf.onclick = ()=>{pdf.click();};
+  exhtml.onclick = ()=>{html.click();};
+
 };
 
 initMD();
