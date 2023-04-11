@@ -22,6 +22,11 @@ pre.md-meta-block.md-end-block.md-focus,pre.md-fences.md-end-block.ty-contain-cm
   display: block;
   margin: auto;
 }
+.copyBtn {
+  border-radius: 4px;
+  opacity: .4;
+}
+.copyBtn:hover{opacity: 1;}
 /* Integrated Window's header background color */
 div.info-panel-tab{margin-top:0;}
 div.sidebar-content{top:40px;}
@@ -329,23 +334,68 @@ var initMD = function () {
       if (write.textContent === "") {
         // 如果是新文档，则默认加上meta信息和自定义style
         // 注入html或者元素都无效（能看到，但是md里面没有），只能模拟系统粘贴或者给用户点击复制然后自行粘贴
-        let button = nE("button", 0, 0, "复制meta信息和style样式");
+        let button = nE("button", 0, 'copyBtn', "复制meta信息和style样式");
         button.onclick = () => {
           copyStr(`---
-title: Typora Note
-author: YXP
-creator: YXP
-subject: Note
-keywords: [Typora, Note, Latex, Diagram]
+title: Title
+author: author
+creator: creator
+subject: subject
+keywords: [keyword1, keyword2]
 ---
 
 \`\`\`style
-/* style代码添加css样式，在切换文件时应用，导出时自动隐藏
-#write * {
-  font-family:SimSun;
-  font-size:11pt;
+body #write{
+	font-family: Consolas, Microsoft Yahei, Roman, "Cambria Math" , SimSun, monospace;
+	max-width:100% !important;
+	padding: 5px;
+	counter-reset: h1;
+	--figPre: "图";
+	--figSuf: " ";
 }
-*/
+body {counter-reset: Figures;}
+code {
+	font-family: Consolas;
+	padding: 1px 2px;
+}
+#write img+p:before, #write svg+p:before {
+	counter-increment: Figures;
+	content: var(--figPre, "Fig") counter(h1) "." counter(h2) "." counter(h3) "-" counter(Figures) var(--figSuf," ") attr(alt);
+	display: block;
+	text-align: center;
+	margin-top: 4px;
+	margin-bottom: 10px;
+}
+.md-toc { counter-reset: h1; }
+#write h1:first-of-type {counter-reset:h1;}
+.md-toc-item.md-toc-h1, #write h1 {
+	counter-reset: h2;
+}
+#write h2 {
+	counter-reset: h3;
+}
+.md-toc-item.md-toc-h1 a:before, #write h1:before {
+	counter-increment: h1;
+	content: counter(h1)
+}
+.md-toc-item.md-toc-h2 a:before, #write h2:before {
+	counter-increment: h2;
+	content: counter(h1) "." counter(h2)
+}
+.md-toc-item.md-toc-h3 a:before, #write h3:before {
+	counter-increment: h3;
+	content: counter(h1) "." counter(h2) "." counter(h3)
+}
+h1:before, h2:before, h3:before{
+	color: #5A5A5A;
+	margin-right:10px;
+}
+.md-toc-item a:before { margin-right:8px; }
+h1 {page-break-before: always;}
+h1+h2 {page-break-before: avoid;}
+h2 {
+	page-break-before: always;
+}
 \`\`\``);
           button.remove();
         };
