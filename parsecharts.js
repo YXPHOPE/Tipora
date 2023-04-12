@@ -46,18 +46,24 @@ div.sidebar-mune#typora-sidebar {left:-1800px;}
   position: absolute;
   left: -1px;
   padding: 5px;
-  top: 27px;
+  transition: top opacity 0.2s;
+  top: 0px;
+  opacity: 0.2;
   width: 43px;
   font-size: 12px;
-  display: none;
+  z-index:-2;
 }
 .btn.toolbar-icon.mybtn {
   padding: 5px 13px;
   opacity: 0.5;
 }
 .btn.toolbar-icon.mybtn:hover {opacity: 1;}
-.btn.toolbar-icon.mybtn:hover .export-choice {display:block;}
+.btn.toolbar-icon.mybtn:hover #expdf {top: 27px;opacity: 1;}
+.btn.toolbar-icon.mybtn:hover #exhtml {top: 54px;opacity: 1;}
 .export-choice:hover {background-color: aqua !important;}
+
+/*  关闭所有动画（浪费） 建议在大文件中自行加上此句样式，防止卡顿（其实就是content重新排版造成的卡顿）
+html body * {transition: none !important;} */
 `;
 // 思来想去，与其自己做解析，还不如首行写上类型，然后提供一个按钮供用户选择是否粘贴该类型的模板
 const Template = {
@@ -95,6 +101,7 @@ series: [
 function $q(s){return document.querySelector(s)}
 const metaProperty = ["title", "xlabel", "ylabel", "xrange", "yrange"];
 const chartType = ["bar", "scatter", "function"];
+var Coords = [0,0];
 if (!window.MDexport) {
   var MDexport = false;
 }
@@ -274,7 +281,7 @@ function myTools(){
   else{write.querySelectorAll('p .md-image.md-img-loaded:only-child img, svg[alt]').forEach(imgProcess);}
   let b = write.lastElementChild;
   // 当第一行的内容超过两个字时移除复制按钮
-  if(b && write.firstElementChild.textContent.length>2 && b.tagName==='BUTTON'){b.remove();}
+  if(b && b.tagName==='BUTTON'&& write.firstElementChild.textContent.length>2 ){b.remove();}
 }
 
 function parseHTML(pre, nofocus = false) {
@@ -324,6 +331,22 @@ var initMD = function () {
       }
     }
   });
+  if (MDexport) {
+    myTools();
+    var chartCode = document.querySelectorAll(".md-fences.md-end-block[lang=echarts]");
+    chartCode.forEach((v) => {
+      console.log("Render charts: ", v);
+      parseCode(v, (nofocus = true));
+    });
+    return;
+    // ！注意！在导出时，后面的代码将不再执行！
+  }
+  document.addEventListener('mousemove',function(e){
+      Coords[0] = e.clientX; 
+      Coords[1] = e.clientY; 
+  });
+  
+  // 每隔一段时间检测文件更改状态
   // 暂未找到更好的方法确定打开另一个文件
   var FileTitle = "。";
   var tmp = $q("#top-titlebar .title-text");
@@ -347,8 +370,8 @@ keywords: [keyword1, keyword2]
 \`\`\`style
 body #write{
 	font-family: Consolas, Microsoft Yahei, Roman, "Cambria Math" , SimSun, monospace;
-	max-width:100% !important;
-	padding: 5px;
+	width:100% !important;
+	padding: 15px;
 	counter-reset: h1;
 	--figPre: "图";
 	--figSuf: " ";
@@ -418,18 +441,10 @@ h2 {
       })
     }
   }, 1000);
+  // 每隔一段时间调用mytools 更新css、更新img名称
   setInterval(myTools,5000);
-  if (MDexport) {
-    myTools();
-    var chartCode = document.querySelectorAll(".md-fences.md-end-block[lang=echarts]");
-    chartCode.forEach((v) => {
-      console.log("Render charts: ", v);
-      parseCode(v, (nofocus = true));
-    });
-    return;
-    // ！注意！在导出时，后面的代码将不再执行！
-  }
 
+  // echarts 代码块内右键菜单
   addStyle(`
 #copyTemp>ul>li:hover {font-weight:bold;background-color:aqua;}
 #copyTemp>ul>li {padding:2px 4px 2px 16px;}
@@ -508,61 +523,101 @@ cursor: pointer;display: none;`;
       }, 2000);
     }
   });
-  // sidebar 自动隐藏
+  // sidebar 自动隐藏（两种外观模式下均有效）
   var sidebar = $q("#typora-sidebar");
   var resizer = $q("#typora-sidebar-resizer");
-  var sidebarWidth = document.documentElement.style.getPropertyValue('--sidebar-width');
-  var timeout;
+  resizer.style.zIndex = 99999;
+  var sidebarWidth = document.documentElement.style.getPropertyValue('--sidebar-width') || '255px';
+  var content = $q('content');
+  var topEle;
+  var timeIn;
   var t;
+  function getTop(){
+    var x = content.offsetLeft + content.clientWidth/2;
+    var y = 30;
+    var ele = document.elementFromPoint(x,y);
+    while((write.isEqualNode(ele) || !write.contains(ele)) && y<500){
+      y+=10;
+      ele = document.elementFromPoint(x,y);
+    }
+    return ele;
+  }``
   function barOut(){
-    timeout = setTimeout(()=>{
-      if(!sidebar.focused && !resizer.focused){
+    if(resizer.mov){return;}
+    clearTimeout(timeIn);
+    // timeout = setTimeout(()=>{
+      // if(!sidebar.focused && !resizer.focused){
+        topEle = getTop();
         t = document.documentElement.style.getPropertyValue('--sidebar-width');
-        t!='0' && (sidebarWidth=t);
-        document.documentElement.style.setProperty('--sidebar-width', '0');
+        t && t!='0' && (sidebarWidth=t);
         sidebar.style.left = '-'+sidebarWidth;
-        resizer.style.width = '20px';
-      }
-    },3000)
+        resizer.style.cssText = 'width:25px;border-left:4px solid rgba(200,200,200,0.5);cursor:grab;';
+        document.documentElement.style.setProperty('--sidebar-width', '0');
+        // 修改了content的宽度，页面显示位置发生了变化
+        setTimeout(view,500);
+      // }
+    // },1000)
   }
-  barOut();
-  function barIn(){
+  function view(){
+    topEle && topEle.scrollIntoView();
+  }
+  function barIn(e){
+    if(resizer.mov){return;}
     this.focused = true;
+    topEle = getTop();
     t = document.documentElement.style.getPropertyValue('--sidebar-width');
-    t!='0' && (sidebarWidth=t);
-    document.documentElement.style.setProperty('--sidebar-width', sidebarWidth);
+    t && t!='0' && (sidebarWidth=t);
+    if(e){
+    if(e.clientY<content.clientHeight/2){
+      // 从上半部分进入显示文件
+      sidebar.classList.remove('active-tab-outline')
+      sidebar.classList.add('active-tab-files');
+    }else{
+      // 从下半部分进入显示大纲
+      sidebar.classList.remove('active-tab-files');
+      sidebar.classList.add('active-tab-outline')
+    }}
     sidebar.style.left = '0';
-    resizer.style.width = '6px';
-    clearTimeout(timeout);
+    resizer.style.cssText = 'width:0px;border-left:0px;cursor:grab;';
+    document.documentElement.style.setProperty('--sidebar-width', sidebarWidth);
+    setTimeout(view,500);
   }
   sidebar.addEventListener('mouseenter',()=>{
     barIn.call(sidebar);
   });
-  sidebar.addEventListener('mouseleave',()=>{
+  sidebar.addEventListener('mouseleave',(e)=>{
+    if(e.clientX<15){return;}
     sidebar.focused = false;
-    if(!resizer.focused){
       barOut()
-    }
   });
-  resizer.addEventListener('mouseenter',()=>{
-    barIn.call(resizer);
+  resizer.addEventListener('mouseenter',(e)=>{
+    if(e.clientX>30){return;}
+    timeIn = setTimeout(()=>{
+      if(Coords[0]<25 && Coords[0]>6){barIn.call(resizer,e);}
+    },600);
+    
   });
-  resizer.addEventListener('mouseleave',()=>{
-    resizer.focused = false;
-    if(!sidebar.focused){
-      barOut();}
-  });
+  // resizer太小了，大概率捕捉不到
+  // resizer.addEventListener('mouseleave',(e)=>{
+  //   if(e.clientX<15){return;}
+  //   resizer.focused = false;
+  //   if(!sidebar.focused){
+  //     barOut();}
+  // });
+  resizer.addEventListener('mousedown',()=>{resizer.mov = true;})
+  resizer.addEventListener('mouseup',()=>{resizer.mov = false;})
+  // 软件右上角添加 导出和设置 按钮 （经典模式下无效）
   var btns = $q('#w-traffic-lights');
   var html = $q('.do-export-button[data-key=html]');
   var pdf = $q('.do-export-button[data-key=pdf]');
   var pref = $q('a#m-preference');
-  var exp = nE('span',0,'btn toolbar-icon mybtn',`<svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2634" width="15" height="15"><path d="M968.772267 508.791467 757.111467 297.0624 757.111467 455.611733 680.0384 455.611733 671.061333 455.611733 368.503467 455.611733 368.503467 562.005333 671.061333 562.005333 680.0384 562.005333 757.111467 562.005333 757.111467 720.452267Z" p-id="2635"></path><path d="M578.389333 781.585067c0 13.175467-10.717867 23.927467-23.927467 23.927467L126.976 805.512533c-13.2096 0-23.927467-10.752-23.927467-23.927467L103.048533 242.414933c0-13.175467 10.717867-23.927467 23.927467-23.927467l427.485867 0c13.2096 0 23.927467 10.752 23.927467 23.927467l0 99.191467 47.8208 0L626.210133 242.414933C626.210133 202.8544 594.0224 170.666667 554.461867 170.666667L126.976 170.666667C87.415467 170.666667 55.227733 202.8544 55.227733 242.414933l0 539.170133C55.227733 821.1456 87.415467 853.333333 126.976 853.333333l427.485867 0c39.560533 0 71.748267-32.187733 71.748267-71.748267l0-99.191467-47.8208 0L578.389333 781.585067z" p-id="2636"></path></svg>`);
+  var exp = nE('span',0,'btn toolbar-icon mybtn',`<svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2634" width="15" height="15"><path d="M968.772267 508.791467 757.111467 297.0624 757.111467 455.611733 680.0384 455.611733 671.061333 455.611733 368.503467 455.611733 368.503467 562.005333 671.061333 562.005333 680.0384 562.005333 757.111467 562.005333 757.111467 720.452267Z" p-id="2635"></path><path d="M578.389333 781.585067c0 13.175467-10.717867 23.927467-23.927467 23.927467L126.976 805.512533c-13.2096 0-23.927467-10.752-23.927467-23.927467L103.048533 242.414933c0-13.175467 10.717867-23.927467 23.927467-23.927467l427.485867 0c13.2096 0 23.927467 10.752 23.927467 23.927467l0 99.191467 47.8208 0L626.210133 242.414933C626.210133 202.8544 594.0224 170.666667 554.461867 170.666667L126.976 170.666667C87.415467 170.666667 55.227733 202.8544 55.227733 242.414933l0 539.170133C55.227733 821.1456 87.415467 853.333333 126.976 853.333333l427.485867 0c39.560533 0 71.748267-32.187733 71.748267-71.748267l0-99.191467-47.8208 0L578.389333 781.585067z" p-id="2636"></path></svg><div style="position: absolute;height: 100%;width: 43px;left: -1px;top: 0;z-index: -1;"></div>`);
   exp.style.cssText = 'position: relative;';
   var prefbtn = nE('span',0,'btn toolbar-icon mybtn','<svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3650" width="15" height="15"><path d="M512 328c-100.8 0-184 83.2-184 184S411.2 696 512 696 696 612.8 696 512 612.8 328 512 328z m0 320c-75.2 0-136-60.8-136-136s60.8-136 136-136 136 60.8 136 136-60.8 136-136 136z" p-id="3651"></path><path d="M857.6 572.8c-20.8-12.8-33.6-35.2-33.6-60.8s12.8-46.4 33.6-60.8c14.4-9.6 20.8-27.2 16-44.8-8-27.2-19.2-52.8-32-76.8-8-14.4-25.6-24-43.2-19.2-24 4.8-48-1.6-65.6-19.2-17.6-17.6-24-41.6-19.2-65.6 3.2-16-4.8-33.6-19.2-43.2-24-14.4-51.2-24-76.8-32-16-4.8-35.2 1.6-44.8 16-12.8 20.8-35.2 33.6-60.8 33.6s-46.4-12.8-60.8-33.6c-9.6-14.4-27.2-20.8-44.8-16-27.2 8-52.8 19.2-76.8 32-14.4 8-24 25.6-19.2 43.2 4.8 24-1.6 49.6-19.2 65.6-17.6 17.6-41.6 24-65.6 19.2-16-3.2-33.6 4.8-43.2 19.2-14.4 24-24 51.2-32 76.8-4.8 16 1.6 35.2 16 44.8 20.8 12.8 33.6 35.2 33.6 60.8s-12.8 46.4-33.6 60.8c-14.4 9.6-20.8 27.2-16 44.8 8 27.2 19.2 52.8 32 76.8 8 14.4 25.6 22.4 43.2 19.2 24-4.8 49.6 1.6 65.6 19.2 17.6 17.6 24 41.6 19.2 65.6-3.2 16 4.8 33.6 19.2 43.2 24 14.4 51.2 24 76.8 32 16 4.8 35.2-1.6 44.8-16 12.8-20.8 35.2-33.6 60.8-33.6s46.4 12.8 60.8 33.6c8 11.2 20.8 17.6 33.6 17.6 3.2 0 8 0 11.2-1.6 27.2-8 52.8-19.2 76.8-32 14.4-8 24-25.6 19.2-43.2-4.8-24 1.6-49.6 19.2-65.6 17.6-17.6 41.6-24 65.6-19.2 16 3.2 33.6-4.8 43.2-19.2 14.4-24 24-51.2 32-76.8 4.8-17.6-1.6-35.2-16-44.8z m-56 92.8c-38.4-6.4-76.8 6.4-104 33.6-27.2 27.2-40 65.6-33.6 104-17.6 9.6-36.8 17.6-56 24-22.4-30.4-57.6-49.6-97.6-49.6-38.4 0-73.6 17.6-97.6 49.6-19.2-6.4-38.4-14.4-56-24 6.4-38.4-6.4-76.8-33.6-104-27.2-27.2-65.6-40-104-33.6-9.6-17.6-17.6-36.8-24-56 30.4-22.4 49.6-57.6 49.6-97.6 0-38.4-17.6-73.6-49.6-97.6 6.4-19.2 14.4-38.4 24-56 38.4 6.4 76.8-6.4 104-33.6 27.2-27.2 40-65.6 33.6-104 17.6-9.6 36.8-17.6 56-24 22.4 30.4 57.6 49.6 97.6 49.6 38.4 0 73.6-17.6 97.6-49.6 19.2 6.4 38.4 14.4 56 24-6.4 38.4 6.4 76.8 33.6 104 27.2 27.2 65.6 40 104 33.6 9.6 17.6 17.6 36.8 24 56-30.4 22.4-49.6 57.6-49.6 97.6 0 38.4 17.6 73.6 49.6 97.6-6.4 19.2-14.4 38.4-24 56z" p-id="3652"></path></svg>');
   prefbtn.style.cssText = 'margin-right: 15px;';
-  var exhtml = nE('div',0,'export-choice','HTML');
-  exhtml.style.top = '54px';
-  var expdf = nE('div',0,'export-choice','PDF');
+  var exhtml = nE('div','exhtml','export-choice','HTML');
+  // exhtml.style.top = '27px';
+  var expdf = nE('div','expdf','export-choice','PDF');
   exp.appendChild(expdf);
   exp.appendChild(exhtml);
   btns.insertBefore(prefbtn,btns.firstChild);
@@ -570,7 +625,6 @@ cursor: pointer;display: none;`;
   prefbtn.addEventListener('click',()=>{pref.click();});
   expdf.onclick = ()=>{pdf.click();};
   exhtml.onclick = ()=>{html.click();};
-
 };
 
 initMD();
