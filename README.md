@@ -69,6 +69,8 @@ option={title:[{text:'Michelson-Morley Experiment',left:'center'},{text:'upper: 
 
 <video src="./README.assets/WinCam-2023-04-15-%5B02-05-45%5D.mp4"></video>
 
+![tutieshi_640x394_1s](./README.assets/tutieshi_640x394_1s.gif)
+
 ### 3. 编写HTML
 
 Typora本身会对我们编写的html代码进行一些处理，比如class、id等等很多属性会被屏蔽，少有能用的有style属性。使用purehtml代码块编写的html将原封不动地写入到DOM文档中。
