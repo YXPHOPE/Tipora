@@ -69,7 +69,7 @@ option={title:[{text:'Michelson-Morley Experiment',left:'center'},{text:'upper: 
 
 <video src="./README.assets/WinCam-2023-04-15-%5B02-05-45%5D.mp4"></video>
 
-![tutieshi_640x394_1s](./README.assets/tutieshi_640x394_1s.gif)
+![Gif_20230415032905](./README.assets/Gif_20230415032905.gif)
 
 ### 3. 编写HTML
 
