@@ -2,11 +2,19 @@
 
 在Typora中实现输入代码通过ECharts解析成图表的功能。
 
-适用版本：Typora V1.5.9 for Windows
+适用版本：Typora V1.5.9 for Windows，测试0.9.83版本大部分功能有效。
 
-另外还有其他功能在逐步添加中。
+另外还有其他功能在逐步添加中，如：
+
+- 侧边文件栏、大纲自动收放
+- 导出、设置按钮放于右上角
+- 插入完整的purehtml
+- 插入css
+- 图片自动添加图注
 
 gitee：https://gitee.com/yxphope/Tipora
+
+guthub: [Tipora](https:// github.com/yxphope/Tipora)
 
 <font color="blue">在Typora中实现输入代码通过ECharts解析成图表的功能</font>
 
@@ -22,6 +30,8 @@ gitee：https://gitee.com/yxphope/Tipora
 3. 重新启动Typora即可输入相关语法。
 
 或者您也可以编辑 `D:\Program Files\Typora\resources\appsrc\window\frame.js`，在最后加入下载的两个文件的内容。
+
+较低版本的Typora请手动
 
 ### 导出PDF、HTML
 
@@ -52,7 +62,24 @@ option={title:[{text:'Michelson-Morley Experiment',left:'center'},{text:'upper: 
 
 ![image-20230408004923825](./README.assets/image-20230408004923825.png)
 
-### 2. 编写css样式
+### 2. 界面调整
+
+- 侧边栏自动收放
+- 导出、设置按钮设置在右上角，方便快捷
+
+<video src="./README.assets/WinCam-2023-04-15-%5B02-05-45%5D.mp4"></video>
+
+### 3. 编写HTML
+
+Typora本身会对我们编写的html代码进行一些处理，比如class、id等等很多属性会被屏蔽，少有能用的有style属性。使用purehtml代码块编写的html将原封不动地写入到DOM文档中。
+
+````
+```purehtml
+<div class></div>
+```
+````
+
+### 4. 编写css样式
 
 添加一段代码语言为style的代码即可写css样式，每5s应用一次。只会应用第一个style，建议放在开头。
 
@@ -93,7 +120,9 @@ h1:before, h2:before, h3:before{
 
 - 图片自动编号
 
-插件内置了对图片自动编号的功能（在img后插入一个带有alt属性的p元素），默认未开启显示，添加以下代码即可。
+目前支持img和svg标签
+
+插件内置了对图片自动编号的功能（在img、svg后插入一个带有alt属性的p元素），默认未开启显示，添加以下代码即可。
 
 ```css
 
@@ -106,7 +135,7 @@ body {
 	display:block;
 	margin:auto;
 }
-#write img+p:before {
+#write img+p:before, #write svg+p:before {
 	counter-increment: Figures;
 	content: var(--figPre, "Fig") counter(h1) "." counter(h2) "." counter(h3) "-" counter(Figures) var(--figSuf," ") attr(alt);
 	display: block;
@@ -115,5 +144,13 @@ body {
 	margin-bottom: 10px;
 }
 ```
+
+例如：
+
+\!\[Title](path) 将显示 [counter] 标题
+
+\<img alt="title" src="path"/>
+
+\<svg alt="1">\<title>This is the TITLE\</title>\</svg>
 
 - 字体样式，等等，全部可以自由设置

@@ -320,6 +320,24 @@ function parseHTML(pre, nofocus = false) {
     pre.style.marginBottom = h + "px";
   }
 }
+function parseAll(){
+  let script = write.querySelector(".md-fences.md-end-block[lang=script] .CodeMirror-code");
+  if (script) {
+    document.documentElement.appendChild(nE("script", 0, 0, script.textContent));
+    if (MDexport) {
+      write.querySelector(".md-fences.md-end-block[lang=script]").style.display = "none";
+    }
+  }
+  var chartCode = write.querySelectorAll(".md-fences.md-end-block[lang=echarts]");
+  chartCode.forEach((v) => {
+    console.log("Render charts: ", v);
+    parseCode(v, (nofocus = true));
+  });
+  var pureHTML = write.querySelectorAll(".md-fences.md-end-block[lang=purehtml]");
+  pureHTML.forEach((v) => {
+    parseHTML(v, (nofocus = true));
+  });
+}
 var initMD = function () {
   addStyle(cssStyle);
   write.addEventListener("input", (e) => {
@@ -438,22 +456,8 @@ h2 {
         write.appendChild(button);
       }
       myTools();
-      let script = write.querySelector(".md-fences.md-end-block[lang=script] .CodeMirror-code");
-      if (script) {
-        document.documentElement.appendChild(nE("script", 0, 0, script.textContent));
-        if (MDexport) {
-          write.querySelector(".md-fences.md-end-block[lang=script]").style.display = "none";
-        }
-      }
-      var chartCode = write.querySelectorAll(".md-fences.md-end-block[lang=echarts]");
-      chartCode.forEach((v) => {
-        console.log("Render charts: ", v);
-        parseCode(v, (nofocus = true));
-      });
-      var pureHTML = write.querySelectorAll(".md-fences.md-end-block[lang=purehtml]");
-      pureHTML.forEach((v) => {
-        parseHTML(v, (nofocus = true));
-      });
+      parseAll();
+      setTimeout(parseAll,2000);
     }
   }, 1000);
   // 每隔一段时间调用mytools 更新css、更新img名称
