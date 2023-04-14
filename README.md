@@ -31,7 +31,7 @@ guthub: [Tipora](https:// github.com/yxphope/Tipora)
 
 或者您也可以编辑 `D:\Program Files\Typora\resources\appsrc\window\frame.js`，在最后加入下载的两个文件的内容。
 
-较低版本的Typora请手动
+较低版本的Typora，如果使用purehtml或echarts，代码和图层显示区同时显示，请添加以下样式：`.enable-diagrams pre.md-fences[lang=echarts]:not(.md-focus) .CodeMirror,.enable-diagrams pre.md-fences[lang=purehtml]:not(.md-focus) .CodeMirror{display:none;}`
 
 ### 导出PDF、HTML
 
