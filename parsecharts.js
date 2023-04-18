@@ -30,7 +30,7 @@ pre.md-meta-block.md-end-block.md-focus,pre.md-fences.md-end-block.ty-contain-cm
 /* Integrated Window's header background color */
 div.info-panel-tab{margin-top:0;}
 div.sidebar-content{top:40px;}
-header {background-color: aliceblue;}
+header {background-color: aqua;}
 /* scroll bar style */
 ::-webkit-scrollbar {display:none;}
 content::-webkit-scrollbar {
@@ -41,7 +41,12 @@ content::-webkit-scrollbar-thumb {
   background-color: rgba(200,200,220,.4);
   border-radius: 4px;
 }
-div.sidebar-mune#typora-sidebar {left:-1800px;}
+.typora-node div#typora-sidebar {
+  left:0px;
+  color: black;
+  background: rgba(250,250,250,0.75);
+  border-left: 1px solid rgba(0,250,250,0.15);
+}
 .export-choice {
   position: absolute;
   left: -1px;
@@ -61,9 +66,20 @@ div.sidebar-mune#typora-sidebar {left:-1800px;}
 .btn.toolbar-icon.mybtn:hover #expdf {top: 27px;opacity: 1;}
 .btn.toolbar-icon.mybtn:hover #exhtml {top: 54px;opacity: 1;}
 .export-choice:hover {background-color: aqua !important;}
-content {left:0 !important;}
-#typora-sidebar-resizer {transition: all 0.3s;cursor:grab;}
+content {
+  left:0 !important;
+  margin: 0 0 1px 0;
+  border:1px solid rgba(0,255,255,0.15);
+  border-top:none;
+}
+div#typora-sidebar-resizer {
+  display: block;
+  transition: all 0.3s;
+  cursor:grab;
+}
 #top-titlebar {height: 28px;}
+.active-tab-files #info-panel-tab-file .info-panel-tab-border, .active-tab-outline #info-panel-tab-outline div.info-panel-tab-border{background:rgba(100,100,100,0.8);}
+.file-node-content {color: #333;}
 /*  关闭所有动画（浪费） 建议在大文件中自行加上此句样式，防止卡顿（其实就是content重新排版造成的卡顿）
 html body * {transition: none !important;} */
 `;
@@ -549,12 +565,14 @@ cursor: pointer;display: none;`;
   resizer.style.zIndex = 99999;
   var sidebarWidth = document.documentElement.style.getPropertyValue("--sidebar-width") || "255px";
   titlebar.style.left = sidebar.style.width = sidebarWidth;
+  var siderbarW = parseInt(sidebarWidth)-10;
   var content = $q("content");
 
   function barOut() {
     sidebar.style.left = "-" + sidebarWidth;
-    resizer.style.cssText = "left:0;width:20px;border-left:3px solid rgba(200,200,200,0.3);";
+    resizer.style.cssText = "left:0;width:20px;";
     titlebar.style.left = 0;
+    document.documentElement.style.setProperty("--siderbar-width", 0);
   }
   function barIn(e) {
     if (e) {
@@ -571,15 +589,14 @@ cursor: pointer;display: none;`;
     sidebar.style.left = "0";
     resizer.style.cssText = "width:0px;border-left:0px;left:"+sidebarWidth;
     titlebar.style.left = sidebarWidth;
+    document.documentElement.style.setProperty("--siderbar-width", sidebarWidth);
   }
   sidebar.addEventListener("mouseenter", () => {
     barIn.call(sidebar);
   });
   sidebar.addEventListener("mouseleave", (e) => {
-    if (e.clientX < 15) {
-      return;
-    }
-    barOut();
+    if (e.clientX > siderbarW) {
+    barOut();}
   });
   resizer.addEventListener("mouseenter", (e) => {
     if (e.clientX > 30) {
