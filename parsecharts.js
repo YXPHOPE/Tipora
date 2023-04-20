@@ -151,8 +151,6 @@ border-radius: 8px;
   cursor: pointer;
 }
 .modal-login {background: rgba(0,0,0,0.1);}
-/*  关闭所有动画（浪费） 建议在大文件中自行加上此句样式，防止卡顿（其实就是content重新排版造成的卡顿）
-html body * {transition: none !important;} */
 `;
 // 思来想去，与其自己做解析，还不如首行写上类型，然后提供一个按钮供用户选择是否粘贴该类型的模板
 const Template = {
@@ -853,4 +851,3 @@ cursor: pointer;display: none;`;
 };
 
 initMD();
-// 需要追加当用尽了今天的50000字符上限后，更换token
