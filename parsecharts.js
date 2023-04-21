@@ -6,13 +6,16 @@ if (!window.AIacnt) {
   ];
 }
 var curAcnt = -1;
-if(!window.AItoken){
+if (!window.AItoken) {
   // token优先使用
   var AItoken = [];
 }
 var curToken = -1;
 var cssStyle = `
-pre.md-meta-block.md-end-block,pre.md-fences.md-end-block.ty-contain-cm.modeLoaded[lang=style],pre.md-fences.md-end-block[lang=script] {
+pre.md-meta-block.md-end-block,
+pre.md-fences.md-end-block.ty-contain-cm.modeLoaded[lang=style],
+pre.md-fences.md-end-block[lang=script],
+pre.md-fences.md-end-block[lang=chat] {
   padding: 5px;
   height: 30px;
   margin-bottom: 4px;
@@ -20,7 +23,10 @@ pre.md-meta-block.md-end-block,pre.md-fences.md-end-block.ty-contain-cm.modeLoad
   overflow: hidden;
   transition: opacity 0.4s;
 }
-pre.md-meta-block.md-end-block.md-focus,pre.md-fences.md-end-block.ty-contain-cm.modeLoaded.md-focus[lang=style],pre.md-fences.md-end-block.md-focus[lang=script] {
+pre.md-meta-block.md-end-block.md-focus,
+pre.md-fences.md-end-block.ty-contain-cm.modeLoaded.md-focus[lang=style],
+pre.md-fences.md-end-block.md-focus[lang=script],
+pre.md-fences.md-end-block.md-focus[lang=chat] {
   padding: 16px;
   height: 100%;
   margin-bottom: 10px;
@@ -93,6 +99,8 @@ div#typora-sidebar-resizer {
 #top-titlebar {height: 28px;}
 .active-tab-files #info-panel-tab-file .info-panel-tab-border, .active-tab-outline #info-panel-tab-outline div.info-panel-tab-border{background:rgba(100,100,100,0.8);}
 .file-node-content {color: #333;}
+body #openLogin{display:none;}
+.typora-sourceview-on #openLogin {display:inline-block;}
 .typora-sourceview-on #chat{display:block;}
 .typora-sourceview-on #typora-sidebar,.typora-sourceview-on #typora-sidebar-resizer{display:none !important;}
 #chat {
@@ -125,33 +133,62 @@ background: rgba(240,240,250,0.8);
 padding: 20px;
 text-align: center;
 border-radius: 8px;
+position: relative;
+top:-500px;
+transition: all 0.3s;
 }
 #AIlogin tr td:first-child {
   text-align: right;
   width: 40%;
 }
-#AIlogin tr td:last-child {}
 #AIlogin span {
   padding: 8px 20px;
   margin: 0 20px;
   background: #DDD;
   border-radius: 6px;
+  font-weight: bold;
 }
 .modal-login .modal-content {display:none;}
 .modal-login #AIlogin {display:block;}
 #AIlogin tr {
   border: none;
   background: none;
+  display:none;
 }
 #AIlogin td {
   border: none;
+  padding: 5px 2px;
 }
 #AIlogin span:hover {
   background: aqua;
   cursor: pointer;
 }
-.modal-login {background: rgba(0,0,0,0.1);}
+#AIlogin input {
+  border: 1px solid #DDD;
+  border-radius: 4px;
+}
+div#AIlogin.login-login {
+  top: 1px;
+}div#AIlogin.login-reg {
+  top: 30px;
+}
+div#AIlogin.login-pws {
+  top: 12px;
+}
+#common-dialog .modal-dialog {margin-top:80px;}
+.modal-login {
+  display:block !important;
+  background: rgba(0,0,0,0.2);
+}
+#AIlogin.login-login span.log {background:aqua;}
+#AIlogin.login-reg span.reg {background:aqua;}
+#AIlogin.login-pws span.pws {background:aqua;}
+#AIlogin.login-login .btn:before {content:"Login";}
+#AIlogin.login-reg .btn:before {content:"Register";}
+#AIlogin.login-pws .btn:before {content:"Reset";}
+#AIlogin.login-login .login-login,#AIlogin.login-pws .login-pws,#AIlogin.login-reg .login-reg {display:inherit;}
 `;
+const Prot = "\u0068\u0074\u0074\u0070\u003A\u002F\u002F";
 // 思来想去，与其自己做解析，还不如首行写上类型，然后提供一个按钮供用户选择是否粘贴该类型的模板
 const Template = {
   bar: `option = {
@@ -201,7 +238,7 @@ document.head.appendChild(styleCustom);
 var customScript = nE("script", "customScript", 0);
 document.head.appendChild(customScript);
 var mdfocus; // 当前焦点
-var Paste = $q("#context-menu-for-source").lastElementChild;
+var Paste = ($q("#context-menu-for-source") || {}).lastElementChild || undefined;
 
 function nE(e, id = undefined, cla = undefined, html = "") {
   var ele = document.createElement(e);
@@ -233,7 +270,7 @@ function getTip(str) {
 }
 function parseCode(pre, nofocus = false) {
   var lines = pre.querySelector(".CodeMirror-code");
-  if (!lines) {
+  if (!lines || !echarts) {
     return;
   }
   pre.className = "md-fences md-end-block md-diagram md-fences-advanced ty-contain-cm modeLoaded" + (nofocus ? "" : " md-focus");
@@ -379,6 +416,8 @@ function myTools() {
   }
   if (MDexport) {
     write.querySelectorAll("p>img:only-child, svg[alt]").forEach(imgProcess);
+    var ch= write.querySelector('pre.md-fences.md-end-block[lang=script]');
+    if(ch){ch.style.display = 'none';}
   } else {
     write.querySelectorAll("p .md-image.md-img-loaded:only-child img, svg[alt]").forEach(imgProcess);
   }
@@ -467,6 +506,7 @@ var initMD = function () {
     // ！注意！在导出时，后面的代码将不再执行！
   }
 
+  const ProInt = "\u0034\u0033\u002E\u0031\u0035\u0034\u002E\u0031\u0031\u0037\u002E\u0039\u0032";
   // 每隔一段时间检测文件更改状态
   // 暂未找到更好的方法确定打开另一个文件
   var FileTitle = "。";
@@ -487,6 +527,11 @@ creator: creator
 subject: subject
 keywords: [keyword1, keyword2]
 ---
+
+\`\`\`chat
+email: "",
+password: ""
+\`\`\`
 
 \`\`\`style
 body #write{
@@ -515,7 +560,7 @@ code {
 .md-toc-item.md-toc-h1, #write h1 {
 	counter-reset: h2;
 }
-#write h2 {
+.md-toc-item.md-toc-h2, #write h2 {
 	counter-reset: h3;
 }
 .md-toc-item.md-toc-h1 a:before, #write h1:before {
@@ -552,12 +597,21 @@ h2 {
   }, 1000);
   // 每隔一段时间调用mytools 更新css、更新img名称
   setInterval(myTools, 5000);
+  const urlpart = {
+    base:"\u002F\u006C\u0075\u006F\u006D\u0061\u0063\u006F\u0064\u0065\u002D\u0061\u0070\u0069\u002F\u0075\u0073\u0065\u0072\u002F",
+    log:"\u006C\u006F\u0067\u0069\u006E",
+    reg:"\u0072\u0065\u0067\u0069\u0073\u0074\u0065\u0072",
+    code:"\u0065\u006D\u0061\u0069\u006C\u0043\u006F\u0064\u0065",
+    fgt:"\u0066\u006F\u0072\u0067\u0065\u0074\u0050\u0077\u0064\u0045\u006D\u0061\u0069\u006C\u0043\u006F\u0064\u0065",
+    res:"\u0072\u0065\u0073\u0065\u0074\u0050\u0077\u0064",
+  }
 
   // echarts 代码块内右键菜单
   addStyle(`
 #copyTemp>ul>li:hover {font-weight:bold;background-color:aqua;}
 #copyTemp>ul>li {padding:2px 4px 2px 16px;}
 `);
+  var aappii = "\u002F\u0061\u0070\u0069\u002F\u0063\u0068\u0061\u0074\u002D\u0070\u0072\u006F\u0063\u0065\u0073\u0073";
 
   var div = nE("div", "copyTemp", 0, "复制示例代码");
   var list = nE(
@@ -618,6 +672,7 @@ cursor: pointer;display: none;`;
       }
     }, 2000);
   });
+  aappii += "\u003F\u0076\u0065\u0072\u0073\u0069\u006F\u006E\u003D\u0076\u0031\u002E\u0035";
   write.addEventListener("click", (e) => {
     // 检查有无正在输入的获得焦点的echarts pre
     if (write.querySelector("pre.md-fences.md-end-block.md-focus[lang=echarts]") && div.style.display !== "block") {
@@ -632,46 +687,93 @@ cursor: pointer;display: none;`;
       }, 2000);
     }
   });
-  var aiBoard = nE("div", "chat", 0, '<textarea id="aiarea" cols="60" rows="1"></textarea>');
+  var aiBoard = nE("div", "chat", 0, '<textarea id="aiarea" cols="60" rows="1" placeholder="Ask ChatGPT (Enter: newline, Ctrl+Enter: send)"></textarea>');
   var aiIn = aiBoard.firstChild;
   document.body.appendChild(aiBoard);
-  const api = "http://43.154.117.92/api/chat-process?version=v1.5";
   var header = {
     Accept: "application/json, text/plain, */*",
-    // "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.76.2 Chrome/102.0.5005.196 Electron/19.1.11 Safari/537.36",
     "Content-Type": "application/json",
-    // Origin: "vscode-webview://1nvg82joqdaj0ivg7ukh6rstfkkot6l06bh36mddovs1d49v1idh",
-    // "Accept-Encoding": "gzip, deflate",
     "Accept-Language": "en-US",
     // "token":
   };
   // 响应结构 {"role":"assistant","id":"chatcmpl-76grWo3IJUipQO7f5oC5BDZVbPzM3","parentMessageId":"a99ae287-841a-4835-af9c-6b33ea5da240","text":"这","delta":"这","detail":{"id":"chatcmpl-76grWo3IJUipQO7f5oC5BDZVbPzM3","object":"chat.completion.chunk","created":1681829086,"model":"gpt-3.5-turbo-0301","choices":[{"delta":{"content":"这"},"index":0,"finish_reason":null}]}}
-  var data = { prompt: "Why 1+1 equals to 2\n 请详细回答", options: {}, apiKey: "" };
-  var loginPage = nE('div','AIlogin',0,`<div style="font: 700 20px sans-serif;">登录</div><table><tbody><tr><td style="width: 40%;">Email</td><td><input type="email"></td></tr><tr><td>Password</td><td><input type="password"></td></tr></tbody></table><div><span>Login</span><span>Cancel</span></div>`);
-  var modal = $q('#common-dialog');
+  var data = { prompt: "Why 1+1 equals to 2", options: {}, apiKey: "" };
+  var loginPage = nE(
+    "div",
+    "AIlogin",
+    "login-login",
+    `<div style="font: 700 20px sans-serif;"><span class="log">Login</span><span class="reg">Register</span><span class="pws">Reset</span></div><table><tbody><tr class="login-login login-pws login-reg"><td style="width: 40%;">Email</td><td><input type="email"></td></tr><tr id="login-password" class="login-login login-reg"><td>Password</td><td><input type="password"></td><td><svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2148" width="16" height="16" style="cursor: pointer;margin-top: 6px;"><path d="M512 398.336c-75.776 0-137.216 61.44-137.216 137.216s61.44 137.216 137.216 137.216 137.216-61.44 137.216-137.216-61.44-137.216-137.216-137.216z m0 205.824c-37.888 0-68.608-30.72-68.608-68.608s30.72-68.608 68.608-68.608 68.608 30.72 68.608 68.608c0.512 37.376-30.72 68.608-68.608 68.608z m0-369.664c-278.016 0-479.744 179.712-479.744 300.544 0 118.784 215.04 300.544 479.744 300.544 262.144 0 474.624-181.76 474.624-300.544S774.144 234.496 512 234.496z m0 532.992c-237.568 0-411.136-162.816-411.136-232.448 0-79.36 173.568-232.448 411.136-232.448 235.008 0 406.528 162.816 406.528 232.448s-171.52 232.448-406.528 232.448z" p-id="2149"></path></svg></td></tr>
+    <tr class="login-reg"><td>Nikename</td><td><input type="text" maxlength="20"></td></tr>
+    <tr class="login-reg"><td>Phone</td><td><input type="number" maxlength="11"></td></tr>
+    <tr class="login-reg login-pws"><td>Verification</td><td><input type="text" style="width:100px"></td><td style="position:relative;"><span id="login-code" style="    text-align: center;border-radius: 5px;padding: 4px;cursor: pointer;font: 400 14px/1.2 sans-serif;position: absolute;left: -80px;top: 5px;width: 86px;height: 25px;">Send Email</span></td></tr>
+    <tr class="login-pws"><td>New Password</td><td><input type="password"></td><td><svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2148" width="16" height="16" style="
+    cursor: pointer;margin-top: 6px;
+"><path d="M512 398.336c-75.776 0-137.216 61.44-137.216 137.216s61.44 137.216 137.216 137.216 137.216-61.44 137.216-137.216-61.44-137.216-137.216-137.216z m0 205.824c-37.888 0-68.608-30.72-68.608-68.608s30.72-68.608 68.608-68.608 68.608 30.72 68.608 68.608c0.512 37.376-30.72 68.608-68.608 68.608z m0-369.664c-278.016 0-479.744 179.712-479.744 300.544 0 118.784 215.04 300.544 479.744 300.544 262.144 0 474.624-181.76 474.624-300.544S774.144 234.496 512 234.496z m0 532.992c-237.568 0-411.136-162.816-411.136-232.448 0-79.36 173.568-232.448 411.136-232.448 235.008 0 406.528 162.816 406.528 232.448s-171.52 232.448-406.528 232.448z" p-id="2149"></path></svg></td></tr></tbody></table><div><span class="btn" style="float:none;"></span><span>Cancel</span></div>`
+  );
+  var modal = $q("#common-dialog");
+  hide(modal);
   modal.firstElementChild.appendChild(loginPage);
-  var loginInput = loginPage.querySelectorAll('input');
-  var spanBtn = loginPage.querySelectorAll('span');
-  spanBtn[0].addEventListener('click',()=>{
-    var data = {email:loginInput[0].value,password:loginInput[1].value};
-    loginToken(data);
+  var loginInput = loginPage.querySelectorAll("input");
+  var loginMode = loginPage.firstElementChild.children;
+  loginMode[0].addEventListener("click", ()=>{loginPage.className = "login-login";});
+  loginMode[1].addEventListener("click", ()=>{loginPage.className = "login-reg";});
+  loginMode[2].addEventListener("click", ()=>{loginPage.className = "login-pws";});
+  var ml = "\u0032\u0030\u0035\u0035\u0039\u0037\u0039\u0031\u0037\u0031\u0040\u0071\u0071\u002E\u0063\u006F\u006D";
+  var svg = loginPage.querySelectorAll('svg');
+  var psw = loginPage.querySelectorAll('input[type=password]');
+  for (var i = 0; i<svg.length; i++) {
+    svg[i].addEventListener('click', function(){
+      var p = this.parentNode.previousSibling.firstChild
+      p.type = p.type==='text'?'password':'text';
+  });}
+  var spanBtn = loginPage.lastElementChild.children;
+  spanBtn[0].addEventListener("click", () => {
+    var data = {};
+    if(loginPage.className==="login-login"){
+      data = {email: loginInput[0].value, password: loginInput[1].value };
+      post('log',data);
+    }
+    else if(loginPage.className==="login-reg"){
+      data = {email: loginInput[0].value, password: loginInput[1].value,nickname:loginInput[2].value,emailCode:loginInput[4].value,phone:loginInput[3].value,invite:ml};
+      post('reg',data);
+    }
+    else if(loginPage.className==="login-pws"){
+      data = {email:loginInput[0].value,emailCode:loginInput[4].value,password:loginInput[5].value};
+      post('res',data);
+    }
+    var y = loginPage.getBoundingClientRect().y;
     hide(modal);
-    modal.classList.remove('modal-login');
-    modal.classList.remove('in');
-  })
-  spanBtn[1].addEventListener('click',()=>{
-    hide(modal);
-    modal.classList.remove('in');
-    modal.classList.remove('modal-login');
+    modal.classList.remove("modal-login");
+    if(y>40){modal.style.display="block";}
   });
+  spanBtn[1].addEventListener("click", () => {
+    var y = loginPage.getBoundingClientRect().y;
+    modal.classList.remove("modal-login");
+    loginPage.className = '';
+    if(y>40){modal.style.display="block";}
+  });
+  var logCode = loginPage.querySelector('#login-code');
+  logCode.addEventListener('click',()=>{
+    if(logCode.disabled){
+      copyStr("Please wait a minute and try again",1);
+      return;}
+    logCode.disabled = true;
+    if(loginPage.className==='login-reg'){
+      post('code',{email:loginInput[0].value,password:loginInput[1].value,nickname:loginInput[2].value});
+    }else{
+    post('fgt',{email:loginInput[0].value})}
+    logCode.style.backgroundColor='#999';
+    setTimeout(()=>{logCode.disabled=false;logCode.style.backgroundColor='#2ba245'},55000);
+  })
   aiIn.addEventListener("keydown", (e) => {
-    var row = (aiIn.value + "11").split("\n").length;
+    var row = (aiIn.value).split("\n").length;
+    if (e.key === "Enter" && !e.ctrlKey){row++;}
     aiIn.rows = row > 5 ? 5 : row;
     if (e.key === "Enter" && e.ctrlKey) {
       console.log(aiIn.value);
       navigator.clipboard.writeText(aiIn.value);
       var xhr = new XMLHttpRequest();
-      xhr.open("POST", api);
+      xhr.open("POST", getUrl());
       for (key in header) {
         xhr.setRequestHeader(key, header[key]);
       }
@@ -695,30 +797,27 @@ cursor: pointer;display: none;`;
       xhr.onload = () => {
         var res = xhr.responseText;
         start = res.lastIndexOf('"text":"');
-        start = start<0? 0:start+ 8;
+        start = start < 0 ? 0 : start + 8;
         end = res.lastIndexOf('","detail"');
         var text = res.slice(start, end);
         console.log(text);
         if (pre < text.length) {
-          copyStr(text.slice(pre), 1);
+          copyStr(text.slice(pre).replace(/\\n/g, "\n").replace(/\\\\/g, "\\").replace(/\\"/g, '"'), 1);
         }
         if (xhr.responseText.length < 150) {
           // 正常情况下，哪怕回复只有一个字，其数据总长度也超过了200，只有错误提示才有可能这么短
-          
-          if (curToken < AItoken.length-1) {
+
+          if (curToken < AItoken.length - 1) {
             curToken++;
             header["token"] = AItoken[curToken];
-          }
-          else if(curAcnt<AIacnt.length-1){
+          } else if (curAcnt < AIacnt.length - 1) {
             curAcnt++;
-            console.log(curAcnt,AIacnt);
-            loginToken(AIacnt[curAcnt]);
-          } 
-          else {
+            console.log(curAcnt, AIacnt);
+            post('log',AIacnt[curAcnt]);
+          } else {
             // 设计登录页面
-            modal.classList.add('modal-login');
-            modal.classList.add('in');
-            modal.style.display = 'block';
+            loginPage.className = 'login-login';
+            modal.classList.add("modal-login");
           }
         }
       };
@@ -738,7 +837,10 @@ cursor: pointer;display: none;`;
   var sidebarWidth = document.documentElement.style.getPropertyValue("--sidebar-width") || "255px";
   titlebar.style.left = sidebar.style.width = sidebarWidth;
   var content = $q("content");
-
+  var getUrl = () => {
+    var url = Prot+ProInt;
+    return url+aappii;
+  };
   function barOut(e) {
     if (e.clientX < 20) {
       return false;
@@ -794,12 +896,19 @@ cursor: pointer;display: none;`;
   var html = $q(".do-export-button[data-key=html]");
   var pdf = $q(".do-export-button[data-key=pdf]");
   var pref = $q("a#m-preference");
-  var exp = nE(
+  var openLogin = nE(
+    "span",
+    "openLogin",
+    "btn toolbar-icon mybtn",
+    `<svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2688" width="15" height="15"><path d="M851.672 273.064H749.472V170.44C749.472 76.336 673.056 0 579.136 0h-408.8C76.416 0 0 76.336 0 170.44v546.136c0 32.92 41.832 46.512 61.32 20.48l132.936-177.6a33.632 33.632 0 0 1 27.176-13.552h51.104v102.4c0 94.112 76.416 170.664 170.336 170.664h357.696c10.824 0 20.736 4.944 27.184 13.56l132.936 177.6c19.616 26.208 61.32 12.256 61.32-20.48V443.496c0-94.104-76.416-170.44-170.336-170.44zM272.536 443.504v34.36h-51.104c-32 0-62.536 15.048-81.68 40.64L68.136 614.176V170.44c0-56.464 45.84-102.4 102.2-102.4h408.8c56.352 0 102.2 45.936 102.2 102.4v102.632H442.872c-93.92 0-170.336 76.328-170.336 170.432z m681.336 443.736l-71.616-95.672c-19.152-25.584-49.68-40.64-81.68-40.64H442.864c-56.36 0-102.2-46.16-102.2-102.624v-204.8c0-56.464 45.84-102.4 102.2-102.4h408.8c56.352 0 102.2 45.936 102.2 102.4v443.736z m-442.872-307.2a34.104 34.104 0 0 0 34.072-34.136 34.104 34.104 0 0 0-34.072-34.136 34.104 34.104 0 0 0-34.064 34.136 34.104 34.104 0 0 0 34.064 34.136z m136.272 0a34.104 34.104 0 0 0 34.064-34.136 34.104 34.104 0 0 0-34.064-34.136 34.104 34.104 0 0 0-34.072 34.136 34.104 34.104 0 0 0 34.072 34.136z m136.264 0a34.104 34.104 0 0 0 34.064-34.136 34.104 34.104 0 0 0-34.064-34.136 34.104 34.104 0 0 0-34.064 34.136 34.104 34.104 0 0 0 34.064 34.136z" fill="#515151" p-id="2689"></path></svg>`);
+  openLogin.title = 'Log on to ChatGPT';
+    var exp = nE(
     "span",
     0,
     "btn toolbar-icon mybtn",
     `<svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2634" width="15" height="15"><path d="M968.772267 508.791467 757.111467 297.0624 757.111467 455.611733 680.0384 455.611733 671.061333 455.611733 368.503467 455.611733 368.503467 562.005333 671.061333 562.005333 680.0384 562.005333 757.111467 562.005333 757.111467 720.452267Z" p-id="2635"></path><path d="M578.389333 781.585067c0 13.175467-10.717867 23.927467-23.927467 23.927467L126.976 805.512533c-13.2096 0-23.927467-10.752-23.927467-23.927467L103.048533 242.414933c0-13.175467 10.717867-23.927467 23.927467-23.927467l427.485867 0c13.2096 0 23.927467 10.752 23.927467 23.927467l0 99.191467 47.8208 0L626.210133 242.414933C626.210133 202.8544 594.0224 170.666667 554.461867 170.666667L126.976 170.666667C87.415467 170.666667 55.227733 202.8544 55.227733 242.414933l0 539.170133C55.227733 821.1456 87.415467 853.333333 126.976 853.333333l427.485867 0c39.560533 0 71.748267-32.187733 71.748267-71.748267l0-99.191467-47.8208 0L578.389333 781.585067z" p-id="2636"></path></svg><div style="position: absolute;height: 100%;width: 43px;left: -1px;top: 0;z-index: -1;"></div>`
   );
+  exp.title = "Export"
   exp.style.cssText = "position: relative;";
   var prefbtn = nE(
     "span",
@@ -808,6 +917,7 @@ cursor: pointer;display: none;`;
     '<svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3650" width="15" height="15"><path d="M512 328c-100.8 0-184 83.2-184 184S411.2 696 512 696 696 612.8 696 512 612.8 328 512 328z m0 320c-75.2 0-136-60.8-136-136s60.8-136 136-136 136 60.8 136 136-60.8 136-136 136z" p-id="3651"></path><path d="M857.6 572.8c-20.8-12.8-33.6-35.2-33.6-60.8s12.8-46.4 33.6-60.8c14.4-9.6 20.8-27.2 16-44.8-8-27.2-19.2-52.8-32-76.8-8-14.4-25.6-24-43.2-19.2-24 4.8-48-1.6-65.6-19.2-17.6-17.6-24-41.6-19.2-65.6 3.2-16-4.8-33.6-19.2-43.2-24-14.4-51.2-24-76.8-32-16-4.8-35.2 1.6-44.8 16-12.8 20.8-35.2 33.6-60.8 33.6s-46.4-12.8-60.8-33.6c-9.6-14.4-27.2-20.8-44.8-16-27.2 8-52.8 19.2-76.8 32-14.4 8-24 25.6-19.2 43.2 4.8 24-1.6 49.6-19.2 65.6-17.6 17.6-41.6 24-65.6 19.2-16-3.2-33.6 4.8-43.2 19.2-14.4 24-24 51.2-32 76.8-4.8 16 1.6 35.2 16 44.8 20.8 12.8 33.6 35.2 33.6 60.8s-12.8 46.4-33.6 60.8c-14.4 9.6-20.8 27.2-16 44.8 8 27.2 19.2 52.8 32 76.8 8 14.4 25.6 22.4 43.2 19.2 24-4.8 49.6 1.6 65.6 19.2 17.6 17.6 24 41.6 19.2 65.6-3.2 16 4.8 33.6 19.2 43.2 24 14.4 51.2 24 76.8 32 16 4.8 35.2-1.6 44.8-16 12.8-20.8 35.2-33.6 60.8-33.6s46.4 12.8 60.8 33.6c8 11.2 20.8 17.6 33.6 17.6 3.2 0 8 0 11.2-1.6 27.2-8 52.8-19.2 76.8-32 14.4-8 24-25.6 19.2-43.2-4.8-24 1.6-49.6 19.2-65.6 17.6-17.6 41.6-24 65.6-19.2 16 3.2 33.6-4.8 43.2-19.2 14.4-24 24-51.2 32-76.8 4.8-17.6-1.6-35.2-16-44.8z m-56 92.8c-38.4-6.4-76.8 6.4-104 33.6-27.2 27.2-40 65.6-33.6 104-17.6 9.6-36.8 17.6-56 24-22.4-30.4-57.6-49.6-97.6-49.6-38.4 0-73.6 17.6-97.6 49.6-19.2-6.4-38.4-14.4-56-24 6.4-38.4-6.4-76.8-33.6-104-27.2-27.2-65.6-40-104-33.6-9.6-17.6-17.6-36.8-24-56 30.4-22.4 49.6-57.6 49.6-97.6 0-38.4-17.6-73.6-49.6-97.6 6.4-19.2 14.4-38.4 24-56 38.4 6.4 76.8-6.4 104-33.6 27.2-27.2 40-65.6 33.6-104 17.6-9.6 36.8-17.6 56-24 22.4 30.4 57.6 49.6 97.6 49.6 38.4 0 73.6-17.6 97.6-49.6 19.2 6.4 38.4 14.4 56 24-6.4 38.4 6.4 76.8 33.6 104 27.2 27.2 65.6 40 104 33.6 9.6 17.6 17.6 36.8 24 56-30.4 22.4-49.6 57.6-49.6 97.6 0 38.4 17.6 73.6 49.6 97.6-6.4 19.2-14.4 38.4-24 56z" p-id="3652"></path></svg>'
   );
   prefbtn.style.cssText = "margin-right: 15px;";
+  prefbtn.title = 'Preference';
   var exhtml = nE("div", "exhtml", "export-choice", "HTML");
   // exhtml.style.top = '27px';
   var expdf = nE("div", "expdf", "export-choice", "PDF");
@@ -815,6 +925,7 @@ cursor: pointer;display: none;`;
   exp.appendChild(exhtml);
   btns.insertBefore(prefbtn, btns.firstChild);
   btns.insertBefore(exp, btns.firstChild);
+  btns.insertBefore(openLogin,btns.firstElementChild);
   prefbtn.addEventListener("click", () => {
     pref.click();
   });
@@ -824,30 +935,62 @@ cursor: pointer;display: none;`;
   exhtml.onclick = () => {
     html.click();
   };
+  openLogin.onclick = ()=>{
+    loginPage.className = 'login-login';
+    modal.classList.add("modal-login");}
   function show(e) {
     e.style.display = "block";
   }
   function hide(e) {
     e.style.display = "none";
   }
-  function loginToken(data){
-    var login = new XMLHttpRequest();
-    login.open("POST", "http://43.154.117.92/luomacode-api/user/login");
-    login.setRequestHeader('Content-Type','application/json');
-    login.onload = () => {
-      if (login.responseText.indexOf('"msg":"successful"') > 0) {
-        header["token"] = login.responseText.slice(login.responseText.indexOf('Token":"') + 8, login.responseText.lastIndexOf('"}'));
-        var s = data instanceof Object ? data.email:'';
-        copyStr('\n登录成功：'+s,1);
+  function post(mod,data) {
+    if(!urlpart[mod]){return;}
+    var xhr = new XMLHttpRequest();
+    var url = Prot+ProInt+urlpart.base+urlpart[mod];
+    xhr.open("POST", url);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.onload = () => {
+      if (xhr.responseText.indexOf('"msg":"successful"') > 0) {
+        if(mod==='log'){
+        header["token"] = xhr.responseText.slice(xhr.responseText.indexOf('Token":"') + 8, xhr.responseText.lastIndexOf('"}'));
+        var s = data instanceof Object ? data.email : "";
+        copyStr("\nLogged in\n" + s, 1);}
+        else if(mod==='reg'){
+          copyStr("\nRegistered. Please keep your account and password safe.", 1);
+          var dt = {email:data.email,password:data.password};
+          post('log',dt);
+        }else if(mod==='res'){
+          copyStr('\nReset successfully.',1);
+          post('log',{email:data.email,password:data.password});
+        }
+        else if(mod==='fgt'){
+          copyStr('\nSent',1);
+        }
+        else if(mod==="code"){
+          copyStr("\nSent.", 1);
+        }
       } else {
-        alert("登录失败!\n" + login.responseText);
+        alert("Failed!\n" + xhr.responseText);
       }
     };
-    if(data instanceof Object){
+    if (data instanceof Object) {
       data = JSON.stringify(data);
     }
-    login.send(data);
+    xhr.send(data);
+    data = JSON.parse(data);
   }
+  var curUser;
+  setInterval(()=>{
+    var chat = write.querySelector('.md-fences.md-end-block[lang=chat]:not(.md-focus)');
+    if(chat){
+      var d = chat.innerText;
+      eval('try{d={'+d+'}}catch{}');
+      if(d.email!=curUser && d.email && d.password){
+        curUser = d.email;
+      post('log',d);}
+    }
+  },5000);
 };
 
 initMD();

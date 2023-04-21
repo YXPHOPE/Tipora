@@ -1,50 +1,65 @@
 # Tipora
 
-在Typora中实现输入代码通过ECharts解析成图表的功能。
+原来仅仅是在Typora中实现输入代码通过ECharts解析成图表的功能，后来结果本人的不懈努力，终于打造成一款写作神器。
 
-适用版本：Typora V1.5.9 for Windows，测试0.9.83版本大部分功能有效。
+适用版本：本人使用Typora V1.5.9 for Windows，测试0.9.83版本大部分功能有效。
 
-另外还有其他功能在逐步添加中，如：
+其他功能：
 
 - 侧边文件栏、大纲自动收放
 - 导出、设置按钮放于右上角
-- 插入完整的purehtml
+- 插入完整的purehtml，渲染html代码
 - 插入css
 - 图片自动添加图注
+- <b style='color:red;'>:+1: ChatGPT 正式接入！:rocket:</b> （调用ChatMoss接口，如有侵犯，实在抱歉 :joy: ）
 
 gitee：https://gitee.com/yxphope/Tipora
 
 guthub: [Tipora](https:// github.com/yxphope/Tipora)
 
-<font color="blue">在Typora中实现输入代码通过ECharts解析成图表的功能</font>
+
 
 ## 安装
 
-1. 下载 `echarts.min.js`和 `parsecharts`文件，保存至Typora安装目录下或其他合适位置
+1. 下载和 `parsecharts` （必选） 、 `echarts.min.js`（作图，可选）、 `ecStat.min.js`（数据分析，可选）文件，保存至Typora安装目录下或其他合适位置
+
 2. 打开 `C:\Program Files\Typora\resources\window.html`（或者你的自定义安装目录下的该文件），在文件末尾 `</html>`前添加如下语句（前后顺序不能换，注意 `file://`以及路径分隔符用 `/`）
+
+   <b style='color:red;'>将 yourSavePath 换成自己保存的路径，`\` 换成 `/`</b>
 
    ```html
    <script src="file://D:/yourSavePath/echarts.min.js"></script>
+   <script src="file://D:/yourSavePath/ecStat.min.js"></script>
+   <script>
+   	var AIacnt = [
+   		// {email:'',password:''}, 添加ChatMoss账号，可以加多个
+   	];
+   </script>
+   <!-- 以上三个为可选项 -->
    <script src="file://D:/yourSavePath/parsecharts.js"></script>
    ```
-3. 重新启动Typora即可输入相关语法。
 
-或者您也可以编辑 `D:\Program Files\Typora\resources\appsrc\window\frame.js`，在最后加入下载的两个文件的内容。
+3. 重新启动Typora即可使用。
 
-较低版本的Typora，如果使用purehtml或echarts，代码和图层显示区同时显示，请添加以下样式：`.enable-diagrams pre.md-fences[lang=echarts]:not(.md-focus) .CodeMirror,.enable-diagrams pre.md-fences[lang=purehtml]:not(.md-focus) .CodeMirror{display:none;}`
+
+
+注：较低版本的Typora，如果使用purehtml或echarts，代码和图层显示区同时显示，请添加以下样式：`.enable-diagrams pre.md-fences[lang=echarts]:not(.md-focus) .CodeMirror,.enable-diagrams pre.md-fences[lang=purehtml]:not(.md-focus) .CodeMirror{display:none;}`
 
 ### 导出PDF、HTML
 
 文件->偏好设置->导出->PDF->插入额外内容
+
+<b style='color:red;'>将 yourSavePath 换成自己保存的路径，`\` 换成 `/`</b>
 
 ```html
 <style>
 body {margin:0 !important;padding:0 24px !important;} /*个人设置，可以去除*/
 .md-diagram-panel-preview, svg {page-break-inside: avoid;} /*防止图像被分隔在两页*/
 </style>
-<script src="file://D:/Infinate/Project/mdECharts/echarts.min.js"></script>
+<script src="file://D:/yourSavePath/echarts.min.js"></script>
+<script src="file://D:/yourSavePath/ecStat.min.js"></script>
 <script>var MDexport = true;// 导出时需要立即绘制、禁用动画</script>
-<script src="file://D:/Infinate/Project/mdECharts/parsecharts.js"></script>
+<script src="file://D:/yourSavePath/parsecharts.js"></script>
 ```
 
 文件->偏好设置->导出->PDF->在\<body/>中添加以上内容
@@ -65,6 +80,11 @@ option={title:[{text:'Michelson-Morley Experiment',left:'center'},{text:'upper: 
 ### 2. 界面调整
 
 - 侧边栏自动收放
+
+  也可以通过下面的按钮进行固定和取消固定。
+
+  ![image-20230421150925625](./README.assets/image-20230421150925625.png)
+
 - 导出、设置按钮设置在右上角，方便快捷
 
 <video src="./README.assets/WinCam-2023-04-15-%5B02-05-45%5D.mp4"></video>
@@ -83,7 +103,7 @@ Typora本身会对我们编写的html代码进行一些处理，比如class、id
 
 ### 4. 编写css样式
 
-添加一段代码语言为style的代码即可写css样式，每5s应用一次。只会应用第一个style，建议放在开头。
+添加一段代码语言为style的代码即可写css样式，每5s应用一次。只会应用第一个`style`，建议放在开头。
 
 - h1, h2, h3自动编号
 
@@ -116,15 +136,15 @@ h1:before, h2:before, h3:before{
 
 效果如下
 
- ![image-20230408010108009](./README.assets/image-20230408010108009.png)
+![image-20230408010108009](./README.assets/image-20230408010108009.png)
 
 同时，通过在设置开启typora的调试模式，右键检查元素，即可像浏览器一样审查元素，并按需要添加任何样式。
 
-- 图片自动编号
+### 5. 图片自动编号
 
 目前支持img和svg标签
 
-插件内置了对图片自动编号的功能（在img、svg后插入一个带有alt属性的p元素），默认未开启显示，添加以下代码即可。
+插件内置了对图片自动编号的功能（在img、svg后插入一个带有alt属性的p元素），默认未开启显示，在````style`代码块中添加以下代码即可。
 
 ```css
 
@@ -149,10 +169,27 @@ body {
 
 例如：
 
-\!\[Title](path) 将显示 [counter] 标题
+`![Title](path)` 将显示 `[counter] Title`
 
-\<img alt="title" src="path"/>
+`<img alt="title" src="path"/>`
 
-\<svg alt="1">\<title>This is the TITLE\</title>\</svg>
+`<svg alt="1"><title>This is the TITLE</title></svg>`
+
+效果图：
+
+![图片自动编号、加标题](./README.assets/image-20230421142344613.png)
 
 - 字体样式，等等，全部可以自由设置
+
+### 6. :+1: ChatGPT :rocket:
+
+按下 `Ctrl`+`/` 打开md源代码编写界面，即可看到下边的输入框。
+
+![ChatGPT](./README.assets/image-20230421145104681.png)
+
+点击登录图标可以 登录、注册、重置密码。
+
+输入框：`Enter` 是另起一行， `Ctrl`+`Enter` 才是发送问题。
+
+![](./README.assets/Gif_20230421160401.gif)
+
